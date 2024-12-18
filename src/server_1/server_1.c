@@ -156,7 +156,7 @@ int get_display_resolution(char *dest_str) {
 int send_window_position(int sock) {
     int result = 1;
 
-    char send_buffer[BUFFER_SIZE] = "Это дрочь ебаная";
+    char send_buffer[BUFFER_SIZE];
     if (get_window_position(send_buffer)) {
         send(sock, send_buffer, strlen(send_buffer), 0); 
     }
