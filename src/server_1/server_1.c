@@ -85,16 +85,16 @@ int main() {
 
 void *connection_handler(void *socket_desc) {
     int sock = *(int *)socket_desc;
-    char command_buffer[BUFFER_SIZE];
-    int read_size;
+    //char command_buffer[BUFFER_SIZE];
+    int read_size = 1;
 
     send(sock, "Соединение установлено на сервере 1\n", strlen("Соединение установлено на сервере 1\n"), 0);
 
     // Чтение данных от клиента
-    while ((read_size = recv(sock, command_buffer, BUFFER_SIZE, 0)) > 0) {
-
+    while (read_size > 0) {
+        char command_buffer[BUFFER_SIZE] = {0};
+        read_size = read(sock, command_buffer, BUFFER_SIZE);
         command_handler(command_buffer, sock);
-        
     }
 
     if (read_size == 0) {
@@ -128,7 +128,7 @@ int send_display_resolution(int sock) {
 
     char send_buffer[BUFFER_SIZE];
     if (get_display_resolution(send_buffer)) {
-        send(sock, send_buffer, strlen(send_buffer), 0); 
+        send(sock, send_buffer, strlen(send_buffer) + 1, 0); 
     }
     else {
         result = 0;
@@ -160,7 +160,7 @@ int send_size_window(int sock) {
 
     char send_buffer[BUFFER_SIZE];
     if (get_size_window(send_buffer)) {
-        send(sock, send_buffer, strlen(send_buffer), 0); 
+        send(sock, send_buffer, strlen(send_buffer) + 1, 0); 
     }
     else {
         result = 0;

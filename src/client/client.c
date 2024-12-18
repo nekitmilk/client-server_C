@@ -116,11 +116,12 @@ void disconnect_from_server(int *sock) {
     }
 }
 
-void send_command(int sock, char *command) {
+void send_command(int sock, char command[BUFFER_SIZE]) {
+    //printf("%s\n", command);
     if (sock != -1)
     {
-        send(sock, command, strlen(command), 0);
-        char buffer[BUFFER_SIZE] = {0};
+        send(sock, command, strlen(command) + 1, 0);
+        char buffer[BUFFER_SIZE];
         if (read(sock, buffer, BUFFER_SIZE)) {
             printf("%s\n", buffer);
         } else {
