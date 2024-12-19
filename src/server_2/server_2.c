@@ -1,12 +1,6 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <pthread.h>
+#include "../common.h"
 
 #define PORT 8081
-#define BUFFER_SIZE 1024
 
 void *connection_handler(void *socket_desc);
 void command_handler(char *command, int sock);
@@ -108,82 +102,16 @@ void *connection_handler(void *socket_desc) {
 void command_handler(char *command, int sock) {
     if (strcmp(command, "GET_WORKTIME") == 0)
     {
-        send_server_work_time(sock);
+        //send_server_work_time(sock);
+        send_message(sock, WORKTIME);
     }
     else if (strcmp(command, "GET_COUNT_THREADS") == 0)
     {
-        send_count_threads(sock);
+        //send_count_threads(sock);
+        send_message(sock, COUNT_THREADS);
     }
     else {
         const char *error_message = "Неверная команда\n";
         send(sock, error_message, strlen(error_message), 0);
     }
-}
-
-
-int send_server_work_time(int sock) {
-    int result = 1;
-
-    char send_buffer[BUFFER_SIZE];
-    if (get_server_work_time(send_buffer)) {
-        send(sock, send_buffer, strlen(send_buffer) + 1, 0); 
-    }
-    else {
-        result = 0;
-    }
-
-    return result;
-}
-
-int get_server_work_time(char *dest_str) {
-    int result = 1;
-
-    pid_t pid = getpid(); 
-    char command[BUFFER_SIZE];
-    sprintf(command, "ps -eo pid,comm,etime | grep %d | awk '{print $3}'", pid);
-
-    FILE *fp = popen(command, "r");
-
-    if (fgets(dest_str, BUFFER_SIZE, fp) != NULL) {
-        // Удаляем конец строки
-        dest_str[strcspn(dest_str, "\n")] = 0;
-        pclose(fp);
-    } else {
-        result = 0;
-    }
-
-    return result;
-}
-
-int send_count_threads(int sock) {
-    int result = 1;
-
-    char send_buffer[BUFFER_SIZE];
-    if (get_count_threads(send_buffer)) {
-        send(sock, send_buffer, strlen(send_buffer) + 1, 0); 
-    }
-    else {
-        result = 0;
-    }
-
-    return result;
-}
-
-int get_count_threads(char *dest_str) {
-    int result = 1;
-
-    pid_t pid = getpid(); 
-    char command[BUFFER_SIZE];
-    sprintf(command, "cat /proc/%d/status | grep Threads | awk '{print $2}'", pid);
-    FILE *fp = popen(command, "r");
-
-    if (fgets(dest_str, BUFFER_SIZE, fp) != NULL) {
-        // Удаляем конец строки
-        dest_str[strcspn(dest_str, "\n")] = 0;
-        pclose(fp);
-    } else {
-        result = 0;
-    }
-
-    return result;
 }

@@ -1,12 +1,6 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <pthread.h>
+#include "../common.h"
 
 #define PORT 8080
-#define BUFFER_SIZE 1024
 
 void *connection_handler(void *socket_desc);
 void command_handler(char *command, int sock);
@@ -111,76 +105,16 @@ void *connection_handler(void *socket_desc) {
 void command_handler(char *command, int sock) {
     if (strcmp(command, "GET_SIZE_WINDOW") == 0)
     {
-        send_size_window(sock);
+        //send_size_window(sock);
+        send_message(sock, SIZE_WINDOW);
     }
     else if (strcmp(command, "GET_DISPLAY_RESOLUTION") == 0)
     {
-        send_display_resolution(sock);
+        //send_display_resolution(sock);
+        send_message(sock, DISPLAY_RESOLUTION);
     }
     else {
         const char *error_message = "Неверная команда\n";
         send(sock, error_message, strlen(error_message), 0);
     }
-}
-
-int send_display_resolution(int sock) {
-    int result = 1;
-
-    char send_buffer[BUFFER_SIZE];
-    if (get_display_resolution(send_buffer)) {
-        send(sock, send_buffer, strlen(send_buffer) + 1, 0); 
-    }
-    else {
-        result = 0;
-    }
-
-    return result;
-}
-
-int get_display_resolution(char *dest_str) {
-    int result = 1;
-
-    FILE *fp = popen("xrandr | grep '*' | awk '{print $1}'", "r");
-
-    if (fgets(dest_str, BUFFER_SIZE, fp) != NULL) {
-        // Удаляем конец строки
-        //printf("%s", dest_str);
-        dest_str[strcspn(dest_str, "\n")] = 0;
-        //printf("%s", dest_str);
-        pclose(fp);
-    } else {
-        result = 0;
-    }
-
-    return result;
-}
-
-int send_size_window(int sock) {
-    int result = 1;
-
-    char send_buffer[BUFFER_SIZE];
-    if (get_size_window(send_buffer)) {
-        send(sock, send_buffer, strlen(send_buffer) + 1, 0); 
-    }
-    else {
-        result = 0;
-    }
-
-    return result;
-}
-
-int get_size_window(char *dest_str) {
-    int result = 1; 
-
-    FILE *fp = popen("stty size", "r");
-
-    if (fgets(dest_str, BUFFER_SIZE, fp) != NULL) {
-        // Удаляем конец строки
-        dest_str[strcspn(dest_str, "\n")] = 0;
-        pclose(fp);
-    } else {
-        result = 0;
-    }
-
-    return result;
 }

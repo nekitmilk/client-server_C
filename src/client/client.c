@@ -1,13 +1,10 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <arpa/inet.h>
+#include "../common.h"
 
 #define SERVER1_PORT 8080
 #define SERVER2_PORT 8081
 #define BUFFER_SIZE 1024
 
+void print_menu();
 void connect_to_server(int port, int *sock);
 void disconnect_from_server(int *sock);
 void send_command(int sock, char *command);
@@ -17,17 +14,8 @@ int sock1 = -1; // Сокет для первого сервера
 int sock2 = -1; // Сокет для второго сервера
 
 int main() {
-    int choice;
-    printf("\nВыберите действие:\n");
-    printf("1. Подключиться к серверу 1\n");
-    printf("2. Подключиться к серверу 2\n");
-    printf("3. Отключиться от сервера 1\n");
-    printf("4. Отключиться от сервера 2\n");
-    printf("5. Получить координаты окна серверного процесса\n");
-    printf("6. Получить разрешение основного монитора\n");
-    printf("7. Получить время работы серверного процесса в минутах\n");
-    printf("8. Получить количество потоков серверного процесса\n");
-    printf("9. Выход\n");
+    int choice = 0;
+    print_menu();
 
     while (1) {
 
@@ -42,34 +30,69 @@ int main() {
             case 2:
                 connect_to_server(SERVER2_PORT, &sock2);
                 break;
-            case 3:
+            case -1:
                 disconnect_from_server(&sock1);
                 break;
-            case 4:
+            case -2:
                 disconnect_from_server(&sock2);
+                break;
+            case 3:
+                send_command(sock1, "GET_SIZE_WINDOW");
+                break;
+            case 4:
+                send_command(sock1, "GET_DISPLAY_RESOLUTION");
                 break;
             case 5:
                 send_command(sock1, "GET_SIZE_WINDOW");
-                break;
-            case 6:
                 send_command(sock1, "GET_DISPLAY_RESOLUTION");
                 break;
-            case 7:
+            case 6:
                 send_command(sock2, "GET_WORKTIME");
                 break;
+            case 7:
+                send_command(sock2, "GET_COUNT_THREADS");
+                break;
             case 8:
+                send_command(sock2, "GET_WORKTIME");
                 send_command(sock2, "GET_COUNT_THREADS");
                 break;
             case 9:
-                disconnect_from_server(&sock1);
-                disconnect_from_server(&sock2);
+                if (sock1 != -1)
+                {
+                    disconnect_from_server(&sock1);
+                }
+
+                if (sock2 != -1)
+                {
+                    disconnect_from_server(&sock2);
+                }
+                
                 exit(0);
+            case 10:
+                print_menu();
+                break;
             default:
-                printf("Неверный выбор. Пожалуйста, попробуйте снова.\n");
+                printf("Неверный выбор. Введите 10 для помощи\n");
         }
     }
 
     return 0;
+}
+
+void print_menu() {
+    printf("\nВыберите действие:\n");
+    printf("1. Подключиться к серверу 1\n");
+    printf("-1. Отключиться от сервера 1\n");
+    printf("2. Подключиться к серверу 2\n");
+    printf("-2. Отключиться от сервера 2\n");
+    printf("3. Получить размер окна сервера (сервер 1)\n");
+    printf("4. Получить разрешение основного монитора (сервер 1)\n");
+    printf("5. Получить всю информацию с сервера 1\n");
+    printf("6. Получить время работы серверного процесса в минутах (сервер 2)\n");
+    printf("7. Получить количество потоков серверного процесса (сервер 2)\n");
+    printf("8. Получить всю информацию с сервера 2\n");
+    printf("9. Выход\n");
+    printf("10. Посмотреть меню.\n");
 }
 
 void connect_to_server(int port, int *sock) {
