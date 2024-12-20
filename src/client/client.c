@@ -9,6 +9,8 @@ void connect_to_server(int port, int *sock);
 void disconnect_from_server(int *sock);
 void send_command(int sock, char *command);
 // void get_server_1_window_position();
+void *wait_input_func(void *running);
+void serial_send(int sock, int mode);
 
 int sock1 = -1; // Сокет для первого сервера
 int sock2 = -1; // Сокет для второго сервера
@@ -46,6 +48,46 @@ int main() {
                 send_command(sock1, "GET_SIZE_WINDOW");
                 send_command(sock1, "GET_DISPLAY_RESOLUTION");
                 break;
+            case 12:
+                if (sock1 != -1 && sock2 != -1)
+                {
+                    printf("Вы вошли в режим периодического обновления данных сервера\nДля выхода введите -1\n");
+                    serial_send(sock1, 3);
+                }
+                
+                
+                if (sock1 == -1)
+                {
+                    printf("Нет подключения к серверу 1");
+                } 
+                if (sock2 == -1)
+                {
+                    printf("Нет подключения к серверу 2");
+                }
+
+                break;
+            case 10:
+                if (sock1 == -1)
+                {
+                    printf("Нет подключения к серверу");
+                }
+                else {
+                    printf("Вы вошли в режим периодического обновления данных сервера 1\nДля выхода введите -1\n");
+                    serial_send(sock1, 1);
+                }
+
+                break;
+            case 20:
+                if (sock2 == -1)
+                {
+                    printf("Нет подключения к серверу");
+                }
+                else {
+                    printf("Вы вошли в режим периодического обновления данных сервера 2\nДля выхода введите -1\n");
+                    serial_send(sock2, 2);
+                }
+
+                break;
             case 6:
                 send_command(sock2, "GET_WORKTIME");
                 break;
@@ -68,7 +110,7 @@ int main() {
                 }
                 
                 exit(0);
-            case 10:
+            case 777:
                 print_menu();
                 break;
             default:
@@ -92,7 +134,7 @@ void print_menu() {
     printf("7. Получить количество потоков серверного процесса (сервер 2)\n");
     printf("8. Получить всю информацию с сервера 2\n");
     printf("9. Выход\n");
-    printf("10. Посмотреть меню.\n");
+    printf("777. Посмотреть меню.\n");
 }
 
 void connect_to_server(int port, int *sock) {
@@ -139,14 +181,18 @@ void disconnect_from_server(int *sock) {
     }
 }
 
-void send_command(int sock, char command[BUFFER_SIZE]) {
+void send_command(int sock, char* command) {
     //printf("%s\n", command);
     if (sock != -1)
     {
         send(sock, command, strlen(command) + 1, 0);
         char buffer[BUFFER_SIZE];
         if (read(sock, buffer, BUFFER_SIZE)) {
-            printf("%s\n", buffer);
+            if (strcmp(buffer, "nothing") != 0)
+            {
+                printf("%s\n", buffer);
+            }
+            
         } else {
             printf("Ошибка чтения данных.\n");
         }
@@ -154,4 +200,60 @@ void send_command(int sock, char command[BUFFER_SIZE]) {
     else {
         printf("Нет подключения к серверу\n");
     }
+}
+
+void serial_send(int sock, int mode) {
+    int running = 1;
+
+    pthread_t wait_input;
+    if (pthread_create(&wait_input, NULL, wait_input_func, (void *)&running))
+    {
+        perror("Ошибка создания потока");
+    }
+    
+    while (running) {
+        if (mode == 1)
+        {
+            char buffer[BUFFER_SIZE] = {0};
+            send_command(sock, "GET_SIZE_WINDOW_1");
+            send_command(sock, "GET_DISPLAY_RESOLUTION_1");
+            sleep(1);
+        }
+        else if (mode == 2) {
+            send_command(sock2, "GET_WORKTIME_2");
+            send_command(sock2, "GET_COUNT_THREADS_2");
+            sleep(1);
+        }
+        else if (mode == 3)
+        {
+            send_command(sock1, "GET_SIZE_WINDOW_1");
+            send_command(sock1, "GET_DISPLAY_RESOLUTION_1");
+            send_command(sock2, "GET_WORKTIME_2");
+            send_command(sock2, "GET_COUNT_THREADS_2");
+            sleep(1);
+        }
+        
+        
+    }
+
+    pthread_join(wait_input, NULL);
+
+}
+
+void *wait_input_func(void *running) {
+    int* run = (int*)running;
+
+    int number;
+
+    while (*run)
+    {
+        scanf("%d", &number);
+
+        if (number == -1)
+        {
+            *run = 0;
+        }
+        
+    }
+    return NULL;
 }

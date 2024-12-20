@@ -3,10 +3,8 @@
 #define PORT 8081
 
 void *connection_handler(void *socket_desc);
-void command_handler(char *command, int sock);
-int send_server_work_time(int sock);
+void command_handler(char *command, int sock, char* old_worktime, char *old_count_threads);
 int get_server_work_time(char *dest_str);
-int send_count_threads(int sock);
 int get_count_threads(char *dest_str);
 
 
@@ -81,11 +79,14 @@ void *connection_handler(void *socket_desc) {
 
     send(sock, "Соединение установлено на сервере 2\n", strlen("Соединение установлено на сервере 2\n"), 0);
 
+    char worktime[BUFFER_SIZE] = {0};
+    char count_threads[BUFFER_SIZE] = {0};
+
     // Чтение данных от клиента
     while (read_size > 0) {
         char command_buffer[BUFFER_SIZE] = {0};
         read_size = read(sock, command_buffer, BUFFER_SIZE);
-        command_handler(command_buffer, sock);
+        command_handler(command_buffer, sock, worktime, count_threads);
     }
 
     if (read_size == 0) {
@@ -99,7 +100,13 @@ void *connection_handler(void *socket_desc) {
     return NULL;
 }
 
-void command_handler(char *command, int sock) {
+void command_handler(char *command, int sock, char* old_worktime, char *old_count_threads) {
+    char new_worktime[BUFFER_SIZE];
+    char new_count_threads[BUFFER_SIZE];
+
+    get_server_work_time(new_worktime);
+    get_count_threads(new_count_threads);
+
     if (strcmp(command, "GET_WORKTIME") == 0)
     {
         //send_server_work_time(sock);
@@ -110,8 +117,19 @@ void command_handler(char *command, int sock) {
         //send_count_threads(sock);
         send_message(sock, COUNT_THREADS);
     }
+    else if ((strcmp(command, "GET_WORKTIME_2") == 0) && (strcmp(old_worktime, new_worktime) != 0))
+    {
+        strcpy(old_worktime, new_worktime);
+        send_message(sock, WORKTIME);
+    }
+    else if ((strcmp(command, "GET_COUNT_THREADS_2") == 0) && (strcmp(old_count_threads, new_count_threads) != 0))
+    {
+        //send_display_resolution(sock);
+        strcpy(old_count_threads, new_count_threads);
+        send_message(sock, COUNT_THREADS);
+    }
     else {
-        const char *error_message = "Неверная команда\n";
-        send(sock, error_message, strlen(error_message), 0);
+        send(sock, "nothing", 8, 0);
+        printf("Nothing change\n");
     }
 }

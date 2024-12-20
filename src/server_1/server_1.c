@@ -3,10 +3,8 @@
 #define PORT 8080
 
 void *connection_handler(void *socket_desc);
-void command_handler(char *command, int sock);
-int send_display_resolution(int sock);
+void command_handler(char *command, int sock, char *old_size_window, char *old_display_resolution);
 int get_display_resolution(char *dest_str);
-int send_size_window(int sock);
 int get_size_window(char *str_position);
 
 
@@ -79,16 +77,18 @@ int main() {
 
 void *connection_handler(void *socket_desc) {
     int sock = *(int *)socket_desc;
-    //char command_buffer[BUFFER_SIZE];
     int read_size = 1;
 
     send(sock, "Соединение установлено на сервере 1\n", strlen("Соединение установлено на сервере 1\n"), 0);
+
+    char size_window[BUFFER_SIZE] = {0};
+    char display_resolution[BUFFER_SIZE] = {0};
 
     // Чтение данных от клиента
     while (read_size > 0) {
         char command_buffer[BUFFER_SIZE] = {0};
         read_size = read(sock, command_buffer, BUFFER_SIZE);
-        command_handler(command_buffer, sock);
+        command_handler(command_buffer, sock, size_window, display_resolution);
     }
 
     if (read_size == 0) {
@@ -102,7 +102,17 @@ void *connection_handler(void *socket_desc) {
     return NULL;
 }
 
-void command_handler(char *command, int sock) {
+void command_handler(char *command, int sock, char *old_size_window, char *old_display_resolution) {
+
+    char new_size_window[BUFFER_SIZE];
+    char new_display_resolution[BUFFER_SIZE];
+
+    get_size_window(new_size_window);
+    get_display_resolution(new_display_resolution);
+
+    // printf("%s %s\n", old_size_window, new_size_window);
+    // printf("%d\n", strcmp(old_size_window, new_size_window) == 0);
+
     if (strcmp(command, "GET_SIZE_WINDOW") == 0)
     {
         //send_size_window(sock);
@@ -113,8 +123,20 @@ void command_handler(char *command, int sock) {
         //send_display_resolution(sock);
         send_message(sock, DISPLAY_RESOLUTION);
     }
-    else {
-        const char *error_message = "Неверная команда\n";
-        send(sock, error_message, strlen(error_message), 0);
+    else if ((strcmp(command, "GET_SIZE_WINDOW_1") == 0) && (strcmp(old_size_window, new_size_window) != 0))
+    {
+        strcpy(old_size_window, new_size_window);
+        send_message(sock, SIZE_WINDOW);
     }
+    else if ((strcmp(command, "GET_DISPLAY_RESOLUTION_1") == 0) && (strcmp(old_display_resolution, new_display_resolution) != 0))
+    {
+        //send_display_resolution(sock);
+        strcpy(old_display_resolution, new_display_resolution);
+        send_message(sock, DISPLAY_RESOLUTION);
+    }
+    else {
+        send(sock, "nothing", 8, 0);
+        printf("Nothing change\n");
+    }
+
 }
