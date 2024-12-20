@@ -12,13 +12,14 @@ void *wait_signal_func(void *thread_inp);
 void send_auto(int sock, char* old_size_window, char* old_display_resolution);
 
 void create_log_note(char *buf);
+void *out(void *arg);
 
 const char *pipe_name = "/tmp/server_1";
 int fd;
 
 int main() {
 
-    FILE *pipe = popen("ps -a | grep logger.exe", "r");
+    FILE *pipe = popen("ps -a | grep log", "r");
     if (pipe != NULL) {
         char buffer[BUFFER_SIZE] = {0};
         fgets(buffer, BUFFER_SIZE, pipe);
@@ -31,7 +32,8 @@ int main() {
         perror("fopen");
         return 1;
     }
-    initscr();
+
+    fd = open(pipe_name, O_WRONLY, 066);
     if (fd == -1) { perror("open pipe error"); return 1; }
 
     int server_fd, new_socket;
@@ -70,6 +72,15 @@ int main() {
         create_log_note("listen");
         exit(EXIT_FAILURE);
     }
+
+    pthread_t check_cli;
+    if (pthread_create(&check_cli, NULL, out, NULL)) {
+        perror("Thread CLI create error");
+        create_log_note("Thread CLI create error");
+        close(fd);
+        return 1;
+    }
+    pthread_detach(check_cli);
 
     printf("Сервер 1 запущен на порту %d\n", PORT);
 
@@ -171,8 +182,6 @@ void command_handler(char *command, int sock, char *old_size_window, char *old_d
     {
         send_auto(sock, old_size_window, old_display_resolution);
     }
-
-    
     else {
         send(sock, "nothing", 8, 0);
         printf("Nothing change\n");
@@ -207,6 +216,9 @@ void send_auto(int sock, char* old_size_window, char* old_display_resolution) {
         if ((strcmp(old_size_window, new_size_window) != 0))
         {
             strcpy(old_size_window, new_size_window);
+
+            printf("%s", new_size_window);
+
             send_message(sock, SIZE_WINDOW);
             sleep(1);
         }
@@ -216,6 +228,10 @@ void send_auto(int sock, char* old_size_window, char* old_display_resolution) {
             strcpy(old_display_resolution, new_display_resolution);
             send_message(sock, DISPLAY_RESOLUTION);
             sleep(1);
+        }
+        else {
+            send(sock, "nothing", 8, 0);
+            printf("Nothing change\n");
         }
         sleep(1);
             
@@ -231,12 +247,10 @@ void *wait_signal_func(void *thread_inp) {
     int *run = thr->running;
     int sock = thr->sock;
 
-    //printf("wait sig");
-
     while (*run)
     {
         char buffer[BUFFER_SIZE];
-        read(sock, buffer, strlen(buffer) + 1);
+        read(sock, buffer, BUFFER_SIZE);
 
         if (strcmp(buffer, "STOP") == 0)
         {
@@ -253,4 +267,11 @@ void create_log_note(char *buf) {
     struct tm *now = localtime(&current_datetime);
     sprintf(data, "DATETIME:\t%.2d:%.2d:%.2d %.2d:%.2d:%.4d:\t%s\n", now->tm_hour, now->tm_min, now->tm_sec, now->tm_mday, now->tm_mon+1, now->tm_year+1900, buf);
     ssize_t bytes = write(fd, data, strlen(data) + 1);
+}
+
+void *out(void *arg) {
+    while (getchar() != 'q') { sleep(1); }
+    create_log_note("Shutdown server 1");
+    close(fd);
+    exit(0);
 }

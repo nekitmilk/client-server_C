@@ -83,7 +83,7 @@ int main() {
             case 20:
                 if (sock2 == -1)
                 {
-                    printf("Нет подключения к серверу");
+                    printf("Нет подключения к серверу\n");
                 }
                 else {
                     printf("Вы вошли в режим периодического обновления данных сервера 2\nДля выхода введите -1\n");
@@ -93,7 +93,7 @@ int main() {
             case 101:
                 if (sock1 != -1)
                 {
-                    printf("Автоматический режим обновления данных с сервера 1");
+                    printf("Автоматический режим обновления данных с сервера 1\n");
                     get_auto(1);
 
                 }
@@ -106,20 +106,22 @@ int main() {
             case 201:
                 if (sock2 != -1)
                 {
-                    printf("Автоматический режим обновления данных с сервера 2");
+                    printf("Автоматический режим обновления данных с сервера 2\n");
+                    get_auto(2);
                 }
                 else {
-                    printf("Нет подключения к серверу 2");
+                    printf("Нет подключения к серверу 2\n");
                 }
                 
                 break;
             case 121:
                 if (sock1 != -1 && sock2 != -1)
                 {
-                    printf("Автоматический режим обновления данных с сервера 1 и 2");
+                    printf("Автоматический режим обновления данных с сервера 1 и 2\n");
+                    get_auto(3);
                 }
                 else {
-                    printf("Нет подключения к одному из серверов");
+                    printf("Нет подключения к одному из серверов\n");
                 }
                 
 
@@ -324,7 +326,7 @@ void get_auto(int mode) {
         if (mode == 1)
         {
             //printf("1\n");
-            read(sock1, buffer, strlen(buffer) + 1);
+            read(sock1, buffer, BUFFER_SIZE);
             if (strcmp(buffer, "nothing") != 0)
             {
                 printf("%s\n", buffer);
@@ -332,7 +334,7 @@ void get_auto(int mode) {
             
         }
         else if (mode == 2) {
-            read(sock2, buffer, strlen(buffer) + 1);
+            read(sock2, buffer, BUFFER_SIZE);
             if (strcmp(buffer, "nothing") != 0)
             {
                 printf("%s\n", buffer);
@@ -341,13 +343,13 @@ void get_auto(int mode) {
         }
         else if (mode == 3)
         {
-            read(sock1, buffer, strlen(buffer) + 1);
+            read(sock1, buffer, BUFFER_SIZE);
             if (strcmp(buffer, "nothing") != 0)
             {
                 printf("%s\n", buffer);
             }
 
-            read(sock2, buffer, strlen(buffer) + 1);
+            read(sock2, buffer, BUFFER_SIZE);
             if (strcmp(buffer, "nothing") != 0)
             {
                 printf("%s\n", buffer);
@@ -360,16 +362,20 @@ void get_auto(int mode) {
 
     if (mode == 1)
     {
-        printf("STOP");
-        send_command(sock1, "STOP");
+        //printf("STOP");
+        send(sock1, "STOP", 5, 0);
+        //send_command(sock1, "STOP");
     }
     else if (mode == 2) {
-        send_command(sock2, "STOP");
+        send(sock2, "STOP", 5, 0);
+        //send_command(sock2, "STOP");
     }
     else if (mode == 3)
     {
-        send_command(sock1, "STOP");
-        send_command(sock2, "STOP");
+        send(sock1, "STOP", 5, 0);
+        send(sock2, "STOP", 5, 0);
+        //send_command(sock1, "STOP");
+        //send_command(sock2, "STOP");
     }
     
     
@@ -395,4 +401,4 @@ void *wait_signal_func(void *running) {
 
 }
 
-// sudo docker run -it --name container_client --network host docker_client
+// sudo docker run -it --network host docker_client

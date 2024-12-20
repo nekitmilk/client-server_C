@@ -7,13 +7,18 @@ void command_handler(char *command, int sock, char* old_worktime, char *old_coun
 int get_server_work_time(char *dest_str);
 int get_count_threads(char *dest_str);
 
+void send_auto(int sock, char* old_worktime, char* old_count_thread);
+void *wait_signal_func(void *thread_inp);
+
 void create_log_note(char *buf);
 const char *pipe_name = "/tmp/server_2";
 int fd;
 
+void *out(void *arg);
+
 int main() {
 
-    FILE *pipe = popen("ps -a | grep logger.exe", "r");
+    FILE *pipe = popen("ps -a | grep log", "r");
     if (pipe != NULL) {
         char buffer[BUFFER_SIZE] = {0};
         fgets(buffer, BUFFER_SIZE, pipe);
@@ -67,8 +72,17 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
+    pthread_t check_cli;
+    if (pthread_create(&check_cli, NULL, out, NULL)) {
+        perror("Thread CLI create error");
+        create_log_note("Thread CLI create error");
+        close(fd);
+        return 1;
+    }
+    pthread_detach(check_cli);
+
     printf("Сервер 2 запущен на порту %d\n", PORT);
-    create_log_noteprintf("Сервер 2 запущен на порту %d\n", PORT);
+    create_log_note("Сервер 2 запущен на порту");
 
     while (1) {
         // Принятие соединения
@@ -160,10 +174,86 @@ void command_handler(char *command, int sock, char* old_worktime, char *old_coun
         strcpy(old_count_threads, new_count_threads);
         send_message(sock, COUNT_THREADS);
     }
+    else if ((strcmp(command, "GET_AUTO_UPDATE") == 0))
+    {
+        send_auto(sock, old_worktime, old_count_threads);
+    }
     else {
         send(sock, "nothing", 8, 0);
         printf("Nothing change\n");
     }
+}
+
+void send_auto(int sock, char* old_worktime, char* old_count_thread) {
+    int running = 1;
+
+    pthread_t wait_signal;
+
+    thread_input thr;
+    
+    thr.running = &running;
+    thr.sock = sock;
+
+    if (pthread_create(&wait_signal, NULL, wait_signal_func, (void *)&thr))
+    {
+        perror("Ошибка создания потока");
+    }
+    
+    while (running) {
+
+        //printf("send sig\n");
+        char new_worktime[BUFFER_SIZE];
+        char new_count_thread[BUFFER_SIZE];
+
+        get_server_work_time(new_worktime);
+        get_count_threads(new_count_thread);
+
+        if ((strcmp(old_worktime, new_worktime) != 0))
+        {
+            strcpy(old_worktime, new_worktime);
+
+            printf("%s", new_worktime);
+
+            send_message(sock, WORKTIME);
+            sleep(1);
+        }
+        else if ((strcmp(old_count_thread, new_count_thread) != 0))
+        {
+            //send_display_resolution(sock);
+            strcpy(old_count_thread, new_count_thread);
+            send_message(sock, COUNT_THREADS);
+            sleep(1);
+        }
+        else {
+            send(sock, "nothing", 8, 0);
+            printf("Nothing change\n");
+        }
+        sleep(1);
+            
+        
+    }
+
+    pthread_join(wait_signal, NULL);
+}
+
+void *wait_signal_func(void *thread_inp) {
+    thread_input *thr = (thread_input *)thread_inp;
+
+    int *run = thr->running;
+    int sock = thr->sock;
+
+    while (*run)
+    {
+        char buffer[BUFFER_SIZE];
+        read(sock, buffer, BUFFER_SIZE);
+
+        if (strcmp(buffer, "STOP") == 0)
+        {
+            *run = 0;
+        }
+        
+    }
+    return NULL;
 }
 
 void create_log_note(char *buf) {
@@ -172,4 +262,11 @@ void create_log_note(char *buf) {
     struct tm *now = localtime(&current_datetime);
     sprintf(data, "DATETIME:\t%.2d:%.2d:%.2d %.2d:%.2d:%.4d:\t%s\n", now->tm_hour, now->tm_min, now->tm_sec, now->tm_mday, now->tm_mon+1, now->tm_year+1900, buf);
     ssize_t bytes = write(fd, data, strlen(data) + 1);
+}
+
+void *out(void *arg) {
+    while (getchar() != 'q') { sleep(1); }
+    create_log_note("Shutdown server 1");
+    close(fd);
+    exit(0);
 }
