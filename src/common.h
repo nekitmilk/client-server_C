@@ -10,6 +10,8 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 
+#include <fcntl.h>
+
 #define BUFFER_SIZE 1024
 
 #define SIZE_WINDOW 1
@@ -24,6 +26,15 @@ int get_display_resolution(char *dest_str);
 int get_size_window(char *str_position);
 int get_server_work_time(char *dest_str);
 int get_count_threads(char *dest_str);
+
+
+typedef struct 
+{
+    int *running;
+    int sock;
+} thread_input;
+
+
 
 #endif /* COMMON_H */
 

@@ -11,6 +11,9 @@ void send_command(int sock, char *command);
 // void get_server_1_window_position();
 void *wait_input_func(void *running);
 void serial_send(int sock, int mode);
+void *wait_signal_func(void *running);
+
+void get_auto(int mode);
 
 int sock1 = -1; // Сокет для первого сервера
 int sock2 = -1; // Сокет для второго сервера
@@ -86,6 +89,39 @@ int main() {
                     printf("Вы вошли в режим периодического обновления данных сервера 2\nДля выхода введите -1\n");
                     serial_send(sock2, 2);
                 }
+                break;
+            case 101:
+                if (sock1 != -1)
+                {
+                    printf("Автоматический режим обновления данных с сервера 1");
+                    get_auto(1);
+
+                }
+                else {
+                    printf("Нет подключения к серверу 1");
+                }
+                
+
+                break;
+            case 201:
+                if (sock2 != -1)
+                {
+                    printf("Автоматический режим обновления данных с сервера 2");
+                }
+                else {
+                    printf("Нет подключения к серверу 2");
+                }
+                
+                break;
+            case 121:
+                if (sock1 != -1 && sock2 != -1)
+                {
+                    printf("Автоматический режим обновления данных с сервера 1 и 2");
+                }
+                else {
+                    printf("Нет подключения к одному из серверов");
+                }
+                
 
                 break;
             case 6:
@@ -257,3 +293,106 @@ void *wait_input_func(void *running) {
     }
     return NULL;
 }
+
+void get_auto(int mode) {
+
+    int running = 1;
+
+    pthread_t wait_signal;
+    if (pthread_create(&wait_signal, NULL, wait_signal_func, (void *)&running))
+    {
+        perror("Ошибка создания потока");
+    }
+
+    if (mode == 1)
+    {
+        send_command(sock1, "GET_AUTO_UPDATE");
+
+    }
+    else if (mode == 2) {
+        send_command(sock2, "GET_AUTO_UPDATE");
+
+    }
+    else if (mode == 3)
+    {
+        send_command(sock1, "GET_AUTO_UPDATE");
+        send_command(sock2, "GET_AUTO_UPDATE");
+    }     
+
+    while (running) {
+        char buffer[BUFFER_SIZE] = {0};
+        if (mode == 1)
+        {
+            //printf("1\n");
+            read(sock1, buffer, strlen(buffer) + 1);
+            if (strcmp(buffer, "nothing") != 0)
+            {
+                printf("%s\n", buffer);
+            }
+            
+        }
+        else if (mode == 2) {
+            read(sock2, buffer, strlen(buffer) + 1);
+            if (strcmp(buffer, "nothing") != 0)
+            {
+                printf("%s\n", buffer);
+            }
+
+        }
+        else if (mode == 3)
+        {
+            read(sock1, buffer, strlen(buffer) + 1);
+            if (strcmp(buffer, "nothing") != 0)
+            {
+                printf("%s\n", buffer);
+            }
+
+            read(sock2, buffer, strlen(buffer) + 1);
+            if (strcmp(buffer, "nothing") != 0)
+            {
+                printf("%s\n", buffer);
+            }
+        }    
+        
+    }
+
+    pthread_join(wait_signal, NULL);
+
+    if (mode == 1)
+    {
+        printf("STOP");
+        send_command(sock1, "STOP");
+    }
+    else if (mode == 2) {
+        send_command(sock2, "STOP");
+    }
+    else if (mode == 3)
+    {
+        send_command(sock1, "STOP");
+        send_command(sock2, "STOP");
+    }
+    
+    
+
+}
+
+void *wait_signal_func(void *running) {
+    int* run = (int*)running;
+
+    int number;
+
+    while (*run)
+    {
+        scanf("%d", &number);
+
+        if (number == -1)
+        {
+            *run = 0;
+        }
+        
+    }
+    return NULL;
+
+}
+
+// sudo docker run -it --name container_client --network host docker_client
